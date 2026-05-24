@@ -357,7 +357,7 @@ function renderEmployeeCards() {
     <article class="employee-card">
       <div>
         <strong>${escapeHtml(employee.name)}</strong>
-        <small>${escapeHtml(employee.role)} · ${escapeHtml(employee.code)} · senha definida</small>
+        <small>${escapeHtml(employee.role)} · ${escapeHtml(employee.code)}</small>
       </div>
       <div class="employee-card-actions">
         <button class="icon-button" data-edit="${employee.id}" title="Editar" type="button">✎</button>
