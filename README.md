@@ -32,6 +32,7 @@ https://ponto.conectaiba.com.br
 - Validação da sequência correta das batidas.
 - Total de horas do dia.
 - Observação opcional em cada registro de ponto.
+- Anexo opcional em PDF para atestados e justificativas.
 - Relatório por funcionário e período.
 - Resumo de fechamento para conferência.
 - Exportação Excel dos registros.

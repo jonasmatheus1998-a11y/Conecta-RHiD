@@ -30,6 +30,7 @@ const elements = {
   gpsStatus: document.querySelector("#gpsStatus"),
   startCameraButton: document.querySelector("#startCameraButton"),
   punchNote: document.querySelector("#punchNote"),
+  punchAttachment: document.querySelector("#punchAttachment"),
   employeeCards: document.querySelector("#employeeCards"),
   employeeForm: document.querySelector("#employeeForm"),
   employeeId: document.querySelector("#employeeId"),
@@ -138,7 +139,8 @@ async function apiRequest(path, options = {}) {
       p_action: body.action,
       p_location: body.location,
       p_photo: body.photo,
-      p_note: body.note || null
+      p_note: body.note || null,
+      p_attachment: body.attachment || null
     });
   }
 
@@ -355,6 +357,7 @@ function renderPointView() {
           <small>${formatDateTime(record.timestamp)}</small>
           <span class="record-meta">${formatLocation(record.location)}</span>
           ${record.note ? `<span class="record-meta">Obs.: ${escapeHtml(record.note)}</span>` : ""}
+          ${record.attachment ? `<span class="record-meta">Anexo: ${attachmentLink(record.attachment)}</span>` : ""}
         </div>
         <span class="status-badge">${formatTime(new Date(record.timestamp))}</span>
       </article>
@@ -659,6 +662,16 @@ async function punch(action) {
 
   let photo;
   let location;
+  let attachment;
+
+  try {
+    attachment = await readPdfAttachment(elements.punchAttachment.files[0]);
+  } catch (error) {
+    showToast(error.message);
+    setPunchButtonsDisabled(false);
+    elements.statusBadge.textContent = nextStatus(records);
+    return;
+  }
 
   try {
     photo = capturePhoto();
@@ -690,12 +703,14 @@ async function punch(action) {
         date: todayKey(now),
         location,
         photo,
-        note: elements.punchNote.value.trim()
+        note: elements.punchNote.value.trim(),
+        attachment
       }
     });
 
     await refreshState();
     elements.punchNote.value = "";
+    elements.punchAttachment.value = "";
     renderAll();
     showToast(`${actionLabels[action]} registrada para ${employee.name}.`);
   } catch (error) {
@@ -803,7 +818,8 @@ async function exportExcel() {
     "GPS",
     "Precisão GPS",
     "Fotos",
-    "Observações"
+    "Observações",
+    "Anexos PDF"
   ];
 
   const tableRows = [header, ...rows.map((row) => [
@@ -818,7 +834,8 @@ async function exportExcel() {
     row.gps,
     row.accuracy,
     row.photos,
-    row.notes
+    row.notes,
+    row.attachments
   ])];
 
   const html = `
@@ -866,6 +883,34 @@ function downloadFile(filename, content, type) {
   URL.revokeObjectURL(url);
 }
 
+function readPdfAttachment(file) {
+  if (!file) return Promise.resolve(null);
+
+  const maxSize = 2 * 1024 * 1024;
+  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  if (!isPdf) {
+    return Promise.reject(new Error("Anexe somente arquivo PDF."));
+  }
+
+  if (file.size > maxSize) {
+    return Promise.reject(new Error("O PDF deve ter no máximo 2 MB."));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        name: file.name,
+        type: "application/pdf",
+        size: file.size,
+        data: reader.result
+      });
+    };
+    reader.onerror = () => reject(new Error("Não foi possível ler o PDF anexado."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
@@ -891,6 +936,12 @@ function formatLocationLink(location) {
   const longitude = Number(location.longitude).toFixed(6);
   const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
   return `<a class="map-link" href="${url}" target="_blank" rel="noreferrer">Ver mapa</a>`;
+}
+
+function attachmentLink(attachment) {
+  if (!attachment || !attachment.data) return "-";
+  const name = attachment.name || "documento.pdf";
+  return `<a class="map-link" href="${escapeHtml(attachment.data)}" download="${escapeHtml(name)}" target="_blank" rel="noreferrer">${escapeHtml(name)}</a>`;
 }
 
 function escapeHtml(value) {
@@ -1019,6 +1070,10 @@ function buildDailyReportRows(filters) {
           .filter((record) => record.note)
           .map((record) => `${actionLabels[record.action]}: ${record.note}`)
           .join(" | ");
+        const attachments = records
+          .filter((record) => record.attachment)
+          .map((record) => `${actionLabels[record.action]}: ${record.attachment.name || "PDF anexado"}`)
+          .join(" | ");
 
         return {
           employeeName: employee.name,
@@ -1032,7 +1087,8 @@ function buildDailyReportRows(filters) {
           gps: lastLocationRecord ? formatLocationText(lastLocationRecord.location) : "",
           accuracy: lastLocationRecord && lastLocationRecord.location ? `${Math.round(lastLocationRecord.location.accuracy)} m` : "",
           photos: `${photos}/${records.length}`,
-          notes
+          notes,
+          attachments
         };
       });
   });

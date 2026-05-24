@@ -36,6 +36,12 @@ Para liberar observações no ponto, filtros avançados de relatório e impress�
 supabase/add-report-filters-and-record-notes.sql
 ```
 
+Para liberar anexos em PDF, como atestado médico ou justificativa formal, rode também:
+
+```txt
+supabase/add-pdf-attachments.sql
+```
+
 ## 2. Conferir configuração do app
 
 O arquivo `index.html` já contém:
@@ -104,6 +110,7 @@ Teste:
 - Relatório mensal.
 - Exportação Excel.
 - Impressão do fechamento.
+- Anexo PDF em justificativas.
 
 ## Observações
 

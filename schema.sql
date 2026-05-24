@@ -32,6 +32,7 @@ create table if not exists public.conecta_records (
   location jsonb not null,
   photo text not null,
   note text,
+  attachment jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -106,7 +107,8 @@ as $$
     'date', p_record.date,
     'location', p_record.location,
     'photo', p_record.photo,
-    'note', p_record.note
+    'note', p_record.note,
+    'attachment', p_record.attachment
   );
 $$;
 
@@ -335,7 +337,8 @@ create or replace function public.save_record_conecta(
   p_action text,
   p_location jsonb,
   p_photo text,
-  p_note text
+  p_note text,
+  p_attachment jsonb
 )
 returns jsonb
 language plpgsql
@@ -386,8 +389,15 @@ begin
     raise exception 'Registro inválido agora.';
   end if;
 
-  insert into public.conecta_records(employee_id, action, latitude, longitude, accuracy, location, photo, note)
-  values (v_employee_id, p_action, v_latitude, v_longitude, v_accuracy, p_location, p_photo, nullif(trim(coalesce(p_note, '')), ''))
+  if p_attachment is not null and (
+    p_attachment->>'type' <> 'application/pdf'
+    or coalesce(p_attachment->>'data', '') not like 'data:application/pdf%'
+  ) then
+    raise exception 'O anexo deve ser um arquivo PDF.';
+  end if;
+
+  insert into public.conecta_records(employee_id, action, latitude, longitude, accuracy, location, photo, note, attachment)
+  values (v_employee_id, p_action, v_latitude, v_longitude, v_accuracy, p_location, p_photo, nullif(trim(coalesce(p_note, '')), ''), p_attachment)
   returning * into v_record;
 
   return jsonb_build_object('record', public.conecta_record_json(v_record));
@@ -427,7 +437,7 @@ grant execute on function public.logout_conecta(uuid) to anon, authenticated;
 grant execute on function public.state_conecta(uuid) to anon, authenticated;
 grant execute on function public.save_employee_conecta(uuid, uuid, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.toggle_employee_conecta(uuid, uuid) to anon, authenticated;
-grant execute on function public.save_record_conecta(uuid, uuid, text, jsonb, text, text) to anon, authenticated;
+grant execute on function public.save_record_conecta(uuid, uuid, text, jsonb, text, text, jsonb) to anon, authenticated;
 grant execute on function public.backup_conecta(uuid) to anon, authenticated;
 
 revoke execute on function public.conecta_require_session(uuid) from public, anon, authenticated;
