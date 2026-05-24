@@ -56,6 +56,8 @@ Os dados ficam salvos no banco SQLite do servidor, incluindo fotos em formato co
 - Apontar `ponto.conectaiba.com.br` para a hospedagem.
 - Trocar as senhas iniciais antes de usar em produção.
 
+Para deploy gratuito com Supabase + Vercel, consulte `DEPLOY_SUPABASE_VERCEL.md`.
+
 ## DNS sugerido
 
 No Registro.br, crie um subdomínio para o sistema de ponto:

@@ -1,5 +1,7 @@
 const SESSION_KEY = "conecta-rhid-session";
 const SYNC_INTERVAL_MS = 30000;
+const SUPABASE_URL = window.ConectaRHiDConfig.supabaseUrl;
+const SUPABASE_KEY = window.ConectaRHiDConfig.supabaseKey;
 
 let state = { employees: [], records: [] };
 let currentSession = loadSession();
@@ -83,32 +85,78 @@ function sessionEmployee() {
 }
 
 async function apiRequest(path, options = {}) {
-  const headers = {
-    ...(options.headers || {})
-  };
+  const method = options.method || "GET";
+  const body = typeof options.body === "string" ? JSON.parse(options.body) : (options.body || {});
 
-  if (options.body && !headers["Content-Type"]) {
-    headers["Content-Type"] = "application/json";
+  if (path === "/api/login" && method === "POST") {
+    return supabaseRpc("login_conecta", {
+      p_mode: body.mode,
+      p_identifier: body.identifier,
+      p_password: body.password
+    });
   }
 
-  if (currentSession && currentSession.token) {
-    headers.Authorization = `Bearer ${currentSession.token}`;
+  if (path === "/api/logout" && method === "POST") {
+    return supabaseRpc("logout_conecta", { p_token: currentSession.token });
   }
 
-  const response = await fetch(path, {
-    ...options,
-    headers,
-    body: options.body && typeof options.body !== "string" ? JSON.stringify(options.body) : options.body
+  if (path === "/api/state" && method === "GET") {
+    return supabaseRpc("state_conecta", { p_token: currentSession.token });
+  }
+
+  if (path === "/api/employees" && method === "POST") {
+    return supabaseRpc("save_employee_conecta", {
+      p_token: currentSession.token,
+      p_id: body.id || null,
+      p_name: body.name,
+      p_role: body.role,
+      p_code: body.code,
+      p_password: body.password || null
+    });
+  }
+
+  const toggleMatch = path.match(/^\/api\/employees\/([^/]+)\/toggle$/);
+  if (toggleMatch && method === "PATCH") {
+    return supabaseRpc("toggle_employee_conecta", {
+      p_token: currentSession.token,
+      p_employee_id: decodeURIComponent(toggleMatch[1])
+    });
+  }
+
+  if (path === "/api/records" && method === "POST") {
+    return supabaseRpc("save_record_conecta", {
+      p_token: currentSession.token,
+      p_employee_id: body.employeeId,
+      p_action: body.action,
+      p_location: body.location,
+      p_photo: body.photo
+    });
+  }
+
+  if (path === "/api/backup" && method === "GET") {
+    return supabaseRpc("backup_conecta", { p_token: currentSession.token });
+  }
+
+  throw new Error("Rota local não mapeada para o Supabase.");
+}
+
+async function supabaseRpc(functionName, payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
   });
 
-  const contentType = response.headers.get("content-type") || "";
-  const payload = contentType.includes("application/json") ? await response.json() : await response.text();
-
+  const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(payload.error || "Erro ao comunicar com o servidor.");
+    throw new Error(data && data.message ? data.message : "Erro ao comunicar com o Supabase.");
   }
 
-  return payload;
+  return data;
 }
 
 async function refreshState() {
@@ -691,16 +739,26 @@ async function toggleEmployee(id) {
 
 async function exportCsv() {
   if (!isAdmin()) return;
-  try {
-    const response = await fetch("/api/export.csv", {
-      headers: { Authorization: `Bearer ${currentSession.token}` }
+  const rows = [["Funcionário", "Código", "Data", "Tipo", "Horário", "Latitude", "Longitude", "Precisão GPS", "Foto registrada"]];
+  state.records
+    .slice()
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .forEach((record) => {
+      const employee = state.employees.find((item) => item.id === record.employeeId);
+      rows.push([
+        employee ? employee.name : "Removido",
+        employee ? employee.code : "",
+        record.date,
+        actionLabels[record.action],
+        formatDateTime(record.timestamp),
+        record.location ? record.location.latitude : "",
+        record.location ? record.location.longitude : "",
+        record.location ? Math.round(record.location.accuracy) : "",
+        record.photo ? "Sim" : "Não"
+      ]);
     });
-    if (!response.ok) throw new Error("Não foi possível exportar CSV.");
-    const content = await response.text();
-    downloadFile("ponto-conecta-rhid.csv", content, "text/csv");
-  } catch (error) {
-    showToast(error.message);
-  }
+
+  downloadFile("ponto-conecta-rhid.csv", rows.map((row) => row.map(csvCell).join(";")).join("\n"), "text/csv");
 }
 
 async function backupJson() {
