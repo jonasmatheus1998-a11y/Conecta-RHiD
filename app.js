@@ -34,6 +34,7 @@ const elements = {
   employeeId: document.querySelector("#employeeId"),
   employeeName: document.querySelector("#employeeName"),
   employeeRole: document.querySelector("#employeeRole"),
+  employeeEmail: document.querySelector("#employeeEmail"),
   employeeCode: document.querySelector("#employeeCode"),
   employeePassword: document.querySelector("#employeePassword"),
   clearFormButton: document.querySelector("#clearFormButton"),
@@ -110,6 +111,7 @@ async function apiRequest(path, options = {}) {
       p_id: body.id || null,
       p_name: body.name,
       p_role: body.role,
+      p_email: body.email,
       p_code: body.code,
       p_password: body.password || null
     });
@@ -301,7 +303,7 @@ function renderEmployeesSelect() {
   employees.forEach((employee) => {
     const option = document.createElement("option");
     option.value = employee.id;
-    option.textContent = `${employee.name} (${employee.code})`;
+    option.textContent = `${employee.name} (${employee.email || employee.code})`;
     elements.employeeSelect.append(option);
   });
 
@@ -328,8 +330,8 @@ function renderPointView() {
 
   elements.employeeSummary.innerHTML = `
     <div class="metric">
-      <span>Código</span>
-      <strong>${escapeHtml(employee.code)}</strong>
+      <span>E-mail</span>
+      <strong>${escapeHtml(employee.email || "-")}</strong>
     </div>
     <div class="metric">
       <span>Cargo</span>
@@ -357,7 +359,7 @@ function renderEmployeeCards() {
     <article class="employee-card">
       <div>
         <strong>${escapeHtml(employee.name)}</strong>
-        <small>${escapeHtml(employee.role)} · ${escapeHtml(employee.code)}</small>
+        <small>${escapeHtml(employee.role)} · ${escapeHtml(employee.email || employee.code)}</small>
       </div>
       <div class="employee-card-actions">
         <button class="icon-button" data-edit="${employee.id}" title="Editar" type="button">✎</button>
@@ -393,6 +395,7 @@ function renderReport() {
     return `
       <tr>
         <td>${escapeHtml(employee.name)}</td>
+        <td>${escapeHtml(employee.email || "-")}</td>
         <td>${uniqueDays}</td>
         <td>${formatDuration(totalMinutes)}</td>
         <td>${lastRecord}</td>
@@ -510,8 +513,8 @@ function stopCamera() {
 function updateLoginMode() {
   const mode = new FormData(elements.loginForm).get("loginMode");
   const isAdminMode = mode === "admin";
-  elements.loginIdentifierLabel.textContent = isAdminMode ? "E-mail do administrador" : "Código do funcionário";
-  elements.loginIdentifier.placeholder = isAdminMode ? "admin@conecta.com" : "Ex: CET-001";
+  elements.loginIdentifierLabel.textContent = isAdminMode ? "E-mail do administrador" : "E-mail do funcionário";
+  elements.loginIdentifier.placeholder = isAdminMode ? "admin@conecta.com" : "nome@conectaiba.com.br";
   elements.loginIdentifier.value = "";
   elements.loginPassword.value = "";
 }
@@ -683,12 +686,20 @@ async function saveEmployee(event) {
     id,
     name: elements.employeeName.value.trim(),
     role: elements.employeeRole.value.trim(),
+    email: elements.employeeEmail.value.trim().toLowerCase(),
     code: elements.employeeCode.value.trim(),
     password: elements.employeePassword.value.trim(),
     active: existing ? existing.active : true
   };
 
-  if (!payload.name || !payload.role || !payload.code || (!existing && !payload.password)) return;
+  if (!payload.code) {
+    payload.code = existing ? existing.code : generateEmployeeCode(payload.name, payload.email);
+  }
+
+  if (!payload.name || !payload.role || !isValidEmail(payload.email) || (!existing && !payload.password)) {
+    showToast("Preencha nome, cargo, e-mail válido e senha inicial.");
+    return;
+  }
 
   try {
     await apiRequest("/api/employees", {
@@ -708,6 +719,7 @@ function clearEmployeeForm() {
   elements.employeeId.value = "";
   elements.employeeName.value = "";
   elements.employeeRole.value = "";
+  elements.employeeEmail.value = "";
   elements.employeeCode.value = "";
   elements.employeePassword.value = "";
   elements.employeePassword.placeholder = "";
@@ -720,6 +732,7 @@ function editEmployee(id) {
   elements.employeeId.value = employee.id;
   elements.employeeName.value = employee.name;
   elements.employeeRole.value = employee.role;
+  elements.employeeEmail.value = employee.email || "";
   elements.employeeCode.value = employee.code;
   elements.employeePassword.value = "";
   elements.employeePassword.placeholder = "Deixe em branco para manter";
@@ -737,28 +750,59 @@ async function toggleEmployee(id) {
   }
 }
 
-async function exportCsv() {
+async function exportExcel() {
   if (!isAdmin()) return;
-  const rows = [["Funcionário", "Código", "Data", "Tipo", "Horário", "Latitude", "Longitude", "Precisão GPS", "Foto registrada"]];
-  state.records
-    .slice()
-    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-    .forEach((record) => {
-      const employee = state.employees.find((item) => item.id === record.employeeId);
-      rows.push([
-        employee ? employee.name : "Removido",
-        employee ? employee.code : "",
-        record.date,
-        actionLabels[record.action],
-        formatDateTime(record.timestamp),
-        record.location ? record.location.latitude : "",
-        record.location ? record.location.longitude : "",
-        record.location ? Math.round(record.location.accuracy) : "",
-        record.photo ? "Sim" : "Não"
-      ]);
-    });
+  const month = elements.monthFilter.value || monthKey();
+  const rows = buildDailyReportRows(month);
+  const header = [
+    "Funcionário",
+    "E-mail",
+    "Data",
+    "Entrada",
+    "Intervalo",
+    "Volta do intervalo",
+    "Saída",
+    "Total do dia",
+    "GPS",
+    "Precisão GPS",
+    "Fotos"
+  ];
 
-  downloadFile("ponto-conecta-rhid.csv", rows.map((row) => row.map(csvCell).join(";")).join("\n"), "text/csv");
+  const tableRows = [header, ...rows.map((row) => [
+    row.employeeName,
+    row.employeeEmail,
+    row.date,
+    row.entrada,
+    row.intervalo,
+    row.retorno,
+    row.saida,
+    row.total,
+    row.gps,
+    row.accuracy,
+    row.photos
+  ])];
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          table { border-collapse: collapse; font-family: Arial, sans-serif; }
+          th { background: #0756d9; color: #ffffff; font-weight: 700; }
+          th, td { border: 1px solid #b8c7df; padding: 8px 10px; mso-number-format:"\\@"; }
+        </style>
+      </head>
+      <body>
+        <table>
+          ${tableRows.map((row, index) => `
+            <tr>${row.map((cell) => `${index === 0 ? "<th>" : "<td>"}${escapeHtml(cell)}${index === 0 ? "</th>" : "</td>"}`).join("")}</tr>
+          `).join("")}
+        </table>
+      </body>
+    </html>
+  `;
+
+  downloadFile(`relatorio-conecta-rhid-${month}.xls`, html, "application/vnd.ms-excel;charset=utf-8");
 }
 
 async function backupJson() {
@@ -781,10 +825,6 @@ function downloadFile(filename, content, type) {
   URL.revokeObjectURL(url);
 }
 
-function csvCell(value) {
-  return `"${String(value).replaceAll('"', '""')}"`;
-}
-
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
@@ -799,6 +839,11 @@ function formatLocation(location) {
   return `GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)} · precisão ${Math.round(location.accuracy)} m`;
 }
 
+function formatLocationText(location) {
+  if (!location) return "";
+  return `${Number(location.latitude).toFixed(6)}, ${Number(location.longitude).toFixed(6)}`;
+}
+
 function formatLocationLink(location) {
   if (!location) return "-";
   const latitude = Number(location.latitude).toFixed(6);
@@ -809,8 +854,70 @@ function formatLocationLink(location) {
 
 function escapeHtml(value) {
   const element = document.createElement("span");
-  element.textContent = value;
+  element.textContent = value == null ? "" : String(value);
   return element.innerHTML;
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function generateEmployeeCode(name, email) {
+  const source = (email ? email.split("@")[0] : name) || "funcionario";
+  const cleaned = source
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 12);
+  return `CET-${cleaned || Date.now().toString().slice(-6)}`;
+}
+
+function formatTimeOnly(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
+function buildDailyReportRows(month) {
+  return state.employees.flatMap((employee) => {
+    const recordsByDay = state.records
+      .filter((record) => record.employeeId === employee.id && record.date.startsWith(month))
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+      .reduce((grouped, record) => {
+        grouped[record.date] = grouped[record.date] || [];
+        grouped[record.date].push(record);
+        return grouped;
+      }, {});
+
+    return Object.entries(recordsByDay)
+      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+      .map(([date, records]) => {
+        const byAction = records.reduce((grouped, record) => {
+          grouped[record.action] = grouped[record.action] || [];
+          grouped[record.action].push(record);
+          return grouped;
+        }, {});
+        const lastLocationRecord = records.slice().reverse().find((record) => record.location);
+        const photos = records.filter((record) => record.photo).length;
+
+        return {
+          employeeName: employee.name,
+          employeeEmail: employee.email || "",
+          date,
+          entrada: formatTimeOnly(byAction.entrada && byAction.entrada[0] && byAction.entrada[0].timestamp),
+          intervalo: formatTimeOnly(byAction.intervalo && byAction.intervalo[0] && byAction.intervalo[0].timestamp),
+          retorno: formatTimeOnly(byAction.retorno && byAction.retorno[0] && byAction.retorno[0].timestamp),
+          saida: formatTimeOnly(byAction.saida && byAction.saida[byAction.saida.length - 1] && byAction.saida[byAction.saida.length - 1].timestamp),
+          total: formatDuration(calculateWorkedMinutes(records)),
+          gps: lastLocationRecord ? formatLocationText(lastLocationRecord.location) : "",
+          accuracy: lastLocationRecord && lastLocationRecord.location ? `${Math.round(lastLocationRecord.location.accuracy)} m` : "",
+          photos: `${photos}/${records.length}`
+        };
+      });
+  });
 }
 
 document.querySelectorAll(".nav-tab").forEach((button) => {
@@ -834,7 +941,7 @@ elements.employeeSelect.addEventListener("change", renderPointView);
 elements.employeeForm.addEventListener("submit", saveEmployee);
 elements.clearFormButton.addEventListener("click", clearEmployeeForm);
 elements.monthFilter.addEventListener("change", renderReport);
-elements.exportCsvButton.addEventListener("click", exportCsv);
+elements.exportCsvButton.addEventListener("click", exportExcel);
 elements.backupButton.addEventListener("click", backupJson);
 
 elements.employeeCards.addEventListener("click", (event) => {

@@ -42,8 +42,8 @@
         </div>
 
         <label class="field">
-          <span id="loginIdentifierLabel">Código do funcionário</span>
-          <input id="loginIdentifier" type="text" autocomplete="username" placeholder="Ex: CET-001" required>
+          <span id="loginIdentifierLabel">E-mail do funcionário</span>
+          <input id="loginIdentifier" type="email" autocomplete="username" placeholder="nome@conectaiba.com.br" required>
         </label>
 
         <label class="field">
@@ -238,7 +238,7 @@
                 <input id="monthFilter" type="month">
                 <button id="exportCsvButton" class="ghost-button" type="button">
                   <span aria-hidden="true">⇩</span>
-                  CSV
+                  Excel
                 </button>
               </div>
             </div>
@@ -247,6 +247,7 @@
                 <thead>
                   <tr>
                     <th>Funcionário</th>
+                    <th>E-mail</th>
                     <th>Dias com ponto</th>
                     <th>Horas no mês</th>
                     <th>Último registro</th>
@@ -289,12 +290,16 @@
                   <input id="employeeRole" type="text" required maxlength="80">
                 </label>
                 <label class="field">
-                  <span>Código</span>
-                  <input id="employeeCode" type="text" required maxlength="20">
+                  <span>E-mail de acesso</span>
+                  <input id="employeeEmail" type="email" required maxlength="120" placeholder="nome@conectaiba.com.br">
+                </label>
+                <label class="field">
+                  <span>Código interno</span>
+                  <input id="employeeCode" type="text" maxlength="20" placeholder="Gerado automaticamente se ficar vazio">
                 </label>
                 <label class="field">
                   <span>Senha de acesso</span>
-                  <input id="employeePassword" type="text" maxlength="30">
+                  <input id="employeePassword" type="password" autocomplete="new-password" maxlength="30">
                 </label>
                 <div class="form-actions">
                   <button class="primary-action" type="submit">Salvar</button>

@@ -21,7 +21,7 @@ https://ponto.conectaiba.com.br
 ## Acessos iniciais
 
 - Administrador: `admin@conecta.com` / `admin123`
-- Funcionários: `CET-001` até `CET-005` / `123456`
+- Funcionários: `funcionario1@conectaiba.com.br` até `funcionario5@conectaiba.com.br` / `123456`
 
 ## O que já faz
 
@@ -32,10 +32,10 @@ https://ponto.conectaiba.com.br
 - Validação da sequência correta das batidas.
 - Total de horas do dia.
 - Relatório mensal por funcionário.
-- Exportação CSV dos registros.
+- Exportação Excel dos registros.
 - Backup JSON dos dados.
-- Backend centralizado em Node.js.
-- Banco de dados SQLite em `data/conecta-rhid.sqlite`.
+- Backend centralizado no Supabase para uso em vários aparelhos.
+- Banco de dados Supabase/PostgreSQL.
 - Sessões de login no servidor.
 
 ## Permissões necessárias
@@ -46,7 +46,7 @@ Para funcionar melhor em celulares e outros computadores, o ideal é publicar o 
 
 ## Onde os dados ficam
 
-Os dados ficam salvos no banco SQLite do servidor, incluindo fotos em formato compactado e coordenadas GPS. Isso permite usar vários dispositivos com dados sincronizados.
+Os dados ficam salvos no Supabase, incluindo fotos em formato compactado e coordenadas GPS. Isso permite usar vários dispositivos com dados sincronizados.
 
 ## Próximos passos recomendados
 

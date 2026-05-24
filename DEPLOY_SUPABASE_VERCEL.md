@@ -17,10 +17,18 @@ Isso cria:
 - Tabela de registros de ponto.
 - Tabela de sessões.
 - Funções RPC usadas pelo app.
-- Funcionários iniciais `CET-001` até `CET-005`.
+- Funcionários iniciais com e-mails `funcionario1@conectaiba.com.br` até `funcionario5@conectaiba.com.br`.
 - Admin inicial `admin@conecta.com` / `admin123`.
 
 Troque a senha do administrador depois do primeiro acesso.
+
+Se o banco já existia antes da versão com login por e-mail, rode também o arquivo:
+
+```txt
+supabase/add-employee-email-and-excel-report.sql
+```
+
+Depois disso, edite cada funcionário no painel administrativo e coloque o e-mail real de acesso.
 
 ## 2. Conferir configuração do app
 
@@ -88,7 +96,7 @@ Teste:
 - Login de funcionário.
 - Registro com câmera e GPS pelo celular.
 - Relatório mensal.
-- Exportação CSV.
+- Exportação Excel.
 
 ## Observações
 
