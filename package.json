@@ -5,7 +5,7 @@
   "description": "Sistema de ponto eletrônico Conecta RHiD com backend Node.js e banco SQLite.",
   "main": "server.js",
   "scripts": {
-    "build": "node -e \"require('fs').mkdirSync('public',{recursive:true}); for (const item of ['index.html','styles.css','app.js','assets','vercel.json']) require('fs').cpSync(item, 'public/' + item, { recursive: true });\"",
+    "build": "node -e \"console.log('Static site ready')\"",
     "start": "node server.js",
     "check": "node --check server.js && node --check app.js"
   },
