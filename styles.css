@@ -35,7 +35,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -492,7 +493,8 @@ h2 {
 }
 
 select,
-input {
+input,
+textarea {
   width: 100%;
   min-height: 52px;
   padding: 12px 14px;
@@ -503,10 +505,16 @@ input {
 }
 
 select:focus,
-input:focus {
+input:focus,
+textarea:focus {
   border-color: #7fb1f4;
   box-shadow: 0 0 0 4px rgba(7, 86, 217, 0.1);
   outline: none;
+}
+
+textarea {
+  min-height: 92px;
+  resize: vertical;
 }
 
 .employee-summary {
@@ -768,8 +776,45 @@ input:focus {
 }
 
 .report-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(190px, 1.2fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr) auto auto;
   gap: 10px;
+  align-items: center;
+  width: min(100%, 1060px);
+}
+
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.summary-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff, #ffffff);
+}
+
+.summary-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.summary-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.45rem;
+}
+
+.summary-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
 }
 
 .table-wrap {
@@ -780,7 +825,7 @@ input:focus {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 980px;
 }
 
 th,
@@ -934,11 +979,16 @@ th {
   }
 
   .report-controls {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .trust-strip {
     grid-template-columns: 1fr;
+  }
+
+  .report-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -963,7 +1013,8 @@ th {
   .punch-actions,
   .employee-summary,
   .verification-box,
-  .overview-grid {
+  .overview-grid,
+  .report-summary {
     grid-template-columns: 1fr;
   }
 
@@ -984,5 +1035,42 @@ th {
 
   .employee-card-actions {
     justify-content: flex-start;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .login-screen,
+  .sidebar,
+  .topbar,
+  #ponto,
+  #funcionarios,
+  .report-controls,
+  .toast {
+    display: none !important;
+  }
+
+  .app-shell,
+  .workspace,
+  .tab-view.active {
+    display: block !important;
+  }
+
+  .workspace,
+  .panel {
+    padding: 0;
+  }
+
+  .panel {
+    border: 0;
+    box-shadow: none;
+  }
+
+  table {
+    min-width: 0;
+    font-size: 11px;
   }
 }

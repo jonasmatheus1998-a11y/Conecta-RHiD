@@ -30,6 +30,12 @@ supabase/add-employee-email-and-excel-report.sql
 
 Depois disso, edite cada funcionário no painel administrativo e coloque o e-mail real de acesso.
 
+Para liberar observações no ponto, filtros avançados de relatório e impressão do fechamento, rode também:
+
+```txt
+supabase/add-report-filters-and-record-notes.sql
+```
+
 ## 2. Conferir configuração do app
 
 O arquivo `index.html` já contém:
@@ -97,6 +103,7 @@ Teste:
 - Registro com câmera e GPS pelo celular.
 - Relatório mensal.
 - Exportação Excel.
+- Impressão do fechamento.
 
 ## Observações
 

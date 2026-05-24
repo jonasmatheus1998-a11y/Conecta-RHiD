@@ -31,6 +31,7 @@ create table if not exists public.conecta_records (
   accuracy double precision not null,
   location jsonb not null,
   photo text not null,
+  note text,
   created_at timestamptz not null default now()
 );
 
@@ -104,7 +105,8 @@ as $$
     'timestamp', p_record.timestamp,
     'date', p_record.date,
     'location', p_record.location,
-    'photo', p_record.photo
+    'photo', p_record.photo,
+    'note', p_record.note
   );
 $$;
 
@@ -332,7 +334,8 @@ create or replace function public.save_record_conecta(
   p_employee_id uuid,
   p_action text,
   p_location jsonb,
-  p_photo text
+  p_photo text,
+  p_note text
 )
 returns jsonb
 language plpgsql
@@ -383,8 +386,8 @@ begin
     raise exception 'Registro inválido agora.';
   end if;
 
-  insert into public.conecta_records(employee_id, action, latitude, longitude, accuracy, location, photo)
-  values (v_employee_id, p_action, v_latitude, v_longitude, v_accuracy, p_location, p_photo)
+  insert into public.conecta_records(employee_id, action, latitude, longitude, accuracy, location, photo, note)
+  values (v_employee_id, p_action, v_latitude, v_longitude, v_accuracy, p_location, p_photo, nullif(trim(coalesce(p_note, '')), ''))
   returning * into v_record;
 
   return jsonb_build_object('record', public.conecta_record_json(v_record));
@@ -424,7 +427,7 @@ grant execute on function public.logout_conecta(uuid) to anon, authenticated;
 grant execute on function public.state_conecta(uuid) to anon, authenticated;
 grant execute on function public.save_employee_conecta(uuid, uuid, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.toggle_employee_conecta(uuid, uuid) to anon, authenticated;
-grant execute on function public.save_record_conecta(uuid, uuid, text, jsonb, text) to anon, authenticated;
+grant execute on function public.save_record_conecta(uuid, uuid, text, jsonb, text, text) to anon, authenticated;
 grant execute on function public.backup_conecta(uuid) to anon, authenticated;
 
 revoke execute on function public.conecta_require_session(uuid) from public, anon, authenticated;

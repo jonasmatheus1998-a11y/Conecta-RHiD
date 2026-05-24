@@ -29,6 +29,7 @@ const elements = {
   cameraStatus: document.querySelector("#cameraStatus"),
   gpsStatus: document.querySelector("#gpsStatus"),
   startCameraButton: document.querySelector("#startCameraButton"),
+  punchNote: document.querySelector("#punchNote"),
   employeeCards: document.querySelector("#employeeCards"),
   employeeForm: document.querySelector("#employeeForm"),
   employeeId: document.querySelector("#employeeId"),
@@ -39,8 +40,13 @@ const elements = {
   employeePassword: document.querySelector("#employeePassword"),
   clearFormButton: document.querySelector("#clearFormButton"),
   monthFilter: document.querySelector("#monthFilter"),
+  reportEmployeeFilter: document.querySelector("#reportEmployeeFilter"),
+  reportStartDate: document.querySelector("#reportStartDate"),
+  reportEndDate: document.querySelector("#reportEndDate"),
+  reportSummary: document.querySelector("#reportSummary"),
   reportTable: document.querySelector("#reportTable"),
   exportCsvButton: document.querySelector("#exportCsvButton"),
+  printReportButton: document.querySelector("#printReportButton"),
   backupButton: document.querySelector("#backupButton"),
   logoutButton: document.querySelector("#logoutButton"),
   userInitials: document.querySelector("#userInitials"),
@@ -131,7 +137,8 @@ async function apiRequest(path, options = {}) {
       p_employee_id: body.employeeId,
       p_action: body.action,
       p_location: body.location,
-      p_photo: body.photo
+      p_photo: body.photo,
+      p_note: body.note || null
     });
   }
 
@@ -347,6 +354,7 @@ function renderPointView() {
           <strong>${actionLabels[record.action]}</strong>
           <small>${formatDateTime(record.timestamp)}</small>
           <span class="record-meta">${formatLocation(record.location)}</span>
+          ${record.note ? `<span class="record-meta">Obs.: ${escapeHtml(record.note)}</span>` : ""}
         </div>
         <span class="status-badge">${formatTime(new Date(record.timestamp))}</span>
       </article>
@@ -371,13 +379,35 @@ function renderEmployeeCards() {
   `).join("");
 }
 
+function renderReportFilters() {
+  if (!isAdmin()) return;
+  const selectedId = elements.reportEmployeeFilter.value || "all";
+  elements.reportEmployeeFilter.innerHTML = '<option value="all">Todos os funcionários</option>';
+
+  state.employees.forEach((employee) => {
+    const option = document.createElement("option");
+    option.value = employee.id;
+    option.textContent = employee.name;
+    elements.reportEmployeeFilter.append(option);
+  });
+
+  if ([...elements.reportEmployeeFilter.options].some((option) => option.value === selectedId)) {
+    elements.reportEmployeeFilter.value = selectedId;
+  }
+}
+
 function renderReport() {
   if (!isAdmin()) return;
-  const month = elements.monthFilter.value || monthKey();
+  renderReportFilters();
+  const filters = getReportFilters();
+  const employees = filteredReportEmployees(filters);
+  const allRecords = filteredReportRecords(filters);
 
-  elements.reportTable.innerHTML = state.employees.map((employee) => {
-    const records = state.records
-      .filter((record) => record.employeeId === employee.id && record.date.startsWith(month))
+  renderReportSummary(employees, allRecords);
+
+  const rows = employees.map((employee) => {
+    const records = allRecords
+      .filter((record) => record.employeeId === employee.id)
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
     const uniqueDays = new Set(records.map((record) => record.date)).size;
@@ -391,6 +421,7 @@ function renderReport() {
     }, 0);
     const lastRecord = records.length ? formatDateTime(records[records.length - 1].timestamp) : "-";
     const lastLocation = records.length ? formatLocationLink(records[records.length - 1].location) : "-";
+    const pendingDays = Object.values(recordsByDay).filter((dayRecords) => lastAction(dayRecords) !== "saida").length;
 
     return `
       <tr>
@@ -399,10 +430,13 @@ function renderReport() {
         <td>${uniqueDays}</td>
         <td>${formatDuration(totalMinutes)}</td>
         <td>${lastRecord}</td>
+        <td>${pendingDays ? `${pendingDays} dia(s)` : "-"}</td>
         <td>${lastLocation}</td>
       </tr>
     `;
   }).join("");
+
+  elements.reportTable.innerHTML = rows || '<tr><td colspan="7">Nenhum registro encontrado para o filtro selecionado.</td></tr>';
 }
 
 function renderAll() {
@@ -411,6 +445,7 @@ function renderAll() {
   renderPointView();
   if (isAdmin()) {
     renderEmployeeCards();
+    renderReportFilters();
     renderReport();
   }
 }
@@ -654,11 +689,13 @@ async function punch(action) {
         timestamp: now.toISOString(),
         date: todayKey(now),
         location,
-        photo
+        photo,
+        note: elements.punchNote.value.trim()
       }
     });
 
     await refreshState();
+    elements.punchNote.value = "";
     renderAll();
     showToast(`${actionLabels[action]} registrada para ${employee.name}.`);
   } catch (error) {
@@ -752,8 +789,8 @@ async function toggleEmployee(id) {
 
 async function exportExcel() {
   if (!isAdmin()) return;
-  const month = elements.monthFilter.value || monthKey();
-  const rows = buildDailyReportRows(month);
+  const filters = getReportFilters();
+  const rows = buildDailyReportRows(filters);
   const header = [
     "Funcionário",
     "E-mail",
@@ -765,7 +802,8 @@ async function exportExcel() {
     "Total do dia",
     "GPS",
     "Precisão GPS",
-    "Fotos"
+    "Fotos",
+    "Observações"
   ];
 
   const tableRows = [header, ...rows.map((row) => [
@@ -779,7 +817,8 @@ async function exportExcel() {
     row.total,
     row.gps,
     row.accuracy,
-    row.photos
+    row.photos,
+    row.notes
   ])];
 
   const html = `
@@ -793,6 +832,8 @@ async function exportExcel() {
         </style>
       </head>
       <body>
+        <h2>Conecta RHiD - Relatório de ponto</h2>
+        <p>Período: ${escapeHtml(filters.startDate)} até ${escapeHtml(filters.endDate)}</p>
         <table>
           ${tableRows.map((row, index) => `
             <tr>${row.map((cell) => `${index === 0 ? "<th>" : "<td>"}${escapeHtml(cell)}${index === 0 ? "</th>" : "</td>"}`).join("")}</tr>
@@ -802,7 +843,7 @@ async function exportExcel() {
     </html>
   `;
 
-  downloadFile(`relatorio-conecta-rhid-${month}.xls`, html, "application/vnd.ms-excel;charset=utf-8");
+  downloadFile(`relatorio-conecta-rhid-${filters.startDate}-${filters.endDate}.xls`, html, "application/vnd.ms-excel;charset=utf-8");
 }
 
 async function backupJson() {
@@ -881,10 +922,82 @@ function formatTimeOnly(value) {
   }).format(new Date(value));
 }
 
-function buildDailyReportRows(month) {
-  return state.employees.flatMap((employee) => {
+function getReportFilters() {
+  return {
+    employeeId: elements.reportEmployeeFilter.value || "all",
+    startDate: elements.reportStartDate.value || monthStart(elements.monthFilter.value || monthKey()),
+    endDate: elements.reportEndDate.value || monthEnd(elements.monthFilter.value || monthKey())
+  };
+}
+
+function filteredReportEmployees(filters) {
+  if (filters.employeeId && filters.employeeId !== "all") {
+    return state.employees.filter((employee) => employee.id === filters.employeeId);
+  }
+  return state.employees;
+}
+
+function filteredReportRecords(filters) {
+  return state.records.filter((record) => {
+    const employeeMatches = !filters.employeeId || filters.employeeId === "all" || record.employeeId === filters.employeeId;
+    return employeeMatches && record.date >= filters.startDate && record.date <= filters.endDate;
+  });
+}
+
+function renderReportSummary(employees, records) {
+  const recordsByDay = records.reduce((grouped, record) => {
+    const key = `${record.employeeId}-${record.date}`;
+    grouped[key] = grouped[key] || [];
+    grouped[key].push(record);
+    return grouped;
+  }, {});
+  const totalMinutes = Object.values(recordsByDay).reduce((total, dayRecords) => total + calculateWorkedMinutes(dayRecords), 0);
+  const pendingDays = Object.values(recordsByDay).filter((dayRecords) => lastAction(dayRecords) !== "saida").length;
+  const photoCount = records.filter((record) => record.photo).length;
+
+  elements.reportSummary.innerHTML = `
+    <article class="summary-card">
+      <span>Equipe filtrada</span>
+      <strong>${employees.length}</strong>
+      <small>${employees.filter((employee) => employee.active).length} ativo(s)</small>
+    </article>
+    <article class="summary-card">
+      <span>Horas no período</span>
+      <strong>${formatDuration(totalMinutes)}</strong>
+      <small>${Object.keys(recordsByDay).length} dia(s) com ponto</small>
+    </article>
+    <article class="summary-card">
+      <span>Registros</span>
+      <strong>${records.length}</strong>
+      <small>${photoCount} com foto</small>
+    </article>
+    <article class="summary-card">
+      <span>Pendências</span>
+      <strong>${pendingDays}</strong>
+      <small>dias sem saída final</small>
+    </article>
+  `;
+}
+
+function monthStart(month) {
+  return `${month}-01`;
+}
+
+function monthEnd(month) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return todayKey(new Date(year, monthNumber, 0));
+}
+
+function setReportRangeFromMonth() {
+  const month = elements.monthFilter.value || monthKey();
+  elements.reportStartDate.value = monthStart(month);
+  elements.reportEndDate.value = monthEnd(month);
+}
+
+function buildDailyReportRows(filters) {
+  return filteredReportEmployees(filters).flatMap((employee) => {
     const recordsByDay = state.records
-      .filter((record) => record.employeeId === employee.id && record.date.startsWith(month))
+      .filter((record) => record.employeeId === employee.id && record.date >= filters.startDate && record.date <= filters.endDate)
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
       .reduce((grouped, record) => {
         grouped[record.date] = grouped[record.date] || [];
@@ -902,6 +1015,10 @@ function buildDailyReportRows(month) {
         }, {});
         const lastLocationRecord = records.slice().reverse().find((record) => record.location);
         const photos = records.filter((record) => record.photo).length;
+        const notes = records
+          .filter((record) => record.note)
+          .map((record) => `${actionLabels[record.action]}: ${record.note}`)
+          .join(" | ");
 
         return {
           employeeName: employee.name,
@@ -914,10 +1031,16 @@ function buildDailyReportRows(month) {
           total: formatDuration(calculateWorkedMinutes(records)),
           gps: lastLocationRecord ? formatLocationText(lastLocationRecord.location) : "",
           accuracy: lastLocationRecord && lastLocationRecord.location ? `${Math.round(lastLocationRecord.location.accuracy)} m` : "",
-          photos: `${photos}/${records.length}`
+          photos: `${photos}/${records.length}`,
+          notes
         };
       });
   });
+}
+
+function printReport() {
+  if (!isAdmin()) return;
+  window.print();
 }
 
 document.querySelectorAll(".nav-tab").forEach((button) => {
@@ -940,8 +1063,15 @@ document.querySelectorAll('input[name="loginMode"]').forEach((input) => {
 elements.employeeSelect.addEventListener("change", renderPointView);
 elements.employeeForm.addEventListener("submit", saveEmployee);
 elements.clearFormButton.addEventListener("click", clearEmployeeForm);
-elements.monthFilter.addEventListener("change", renderReport);
+elements.monthFilter.addEventListener("change", () => {
+  setReportRangeFromMonth();
+  renderReport();
+});
+elements.reportEmployeeFilter.addEventListener("change", renderReport);
+elements.reportStartDate.addEventListener("change", renderReport);
+elements.reportEndDate.addEventListener("change", renderReport);
 elements.exportCsvButton.addEventListener("click", exportExcel);
+elements.printReportButton.addEventListener("click", printReport);
 elements.backupButton.addEventListener("click", backupJson);
 
 elements.employeeCards.addEventListener("click", (event) => {
@@ -952,6 +1082,7 @@ elements.employeeCards.addEventListener("click", (event) => {
 });
 
 elements.monthFilter.value = monthKey();
+setReportRangeFromMonth();
 renderClock();
 updateLoginMode();
 if (currentSession) {

@@ -31,8 +31,11 @@ https://ponto.conectaiba.com.br
 - Exige coordenadas de GPS no momento da batida.
 - Validação da sequência correta das batidas.
 - Total de horas do dia.
-- Relatório mensal por funcionário.
+- Observação opcional em cada registro de ponto.
+- Relatório por funcionário e período.
+- Resumo de fechamento para conferência.
 - Exportação Excel dos registros.
+- Impressão do fechamento.
 - Backup JSON dos dados.
 - Backend centralizado no Supabase para uso em vários aparelhos.
 - Banco de dados Supabase/PostgreSQL.

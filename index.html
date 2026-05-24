@@ -175,6 +175,11 @@
                 </button>
               </section>
 
+              <label class="field">
+                <span>Observação ou justificativa</span>
+                <textarea id="punchNote" maxlength="240" rows="3" placeholder="Opcional"></textarea>
+              </label>
+
               <div class="punch-actions" aria-label="Tipos de registro">
                 <button class="primary-action" data-action="entrada" type="button">
                   <span aria-hidden="true">→</span>
@@ -236,12 +241,20 @@
               </div>
               <div class="report-controls">
                 <input id="monthFilter" type="month">
+                <select id="reportEmployeeFilter" aria-label="Filtrar funcionário"></select>
+                <input id="reportStartDate" type="date" aria-label="Data inicial">
+                <input id="reportEndDate" type="date" aria-label="Data final">
                 <button id="exportCsvButton" class="ghost-button" type="button">
                   <span aria-hidden="true">⇩</span>
                   Excel
                 </button>
+                <button id="printReportButton" class="ghost-button" type="button">
+                  <span aria-hidden="true">⎙</span>
+                  Imprimir
+                </button>
               </div>
             </div>
+            <div id="reportSummary" class="report-summary" aria-label="Resumo do relatório"></div>
             <div class="table-wrap">
               <table>
                 <thead>
@@ -249,8 +262,9 @@
                     <th>Funcionário</th>
                     <th>E-mail</th>
                     <th>Dias com ponto</th>
-                    <th>Horas no mês</th>
+                    <th>Horas no período</th>
                     <th>Último registro</th>
+                    <th>Pendências</th>
                     <th>GPS</th>
                   </tr>
                 </thead>
