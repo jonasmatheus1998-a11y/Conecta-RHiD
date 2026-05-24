@@ -111,6 +111,13 @@ Teste:
 - Exportação Excel.
 - Impressão do fechamento.
 - Anexo PDF em justificativas.
+- Instalação como app no Android e iPhone.
+
+## 7. Instalar como app
+
+No Android, abra o site no Chrome e toque em `Instalar app` quando a opção aparecer.
+
+No iPhone, abra no Safari, toque em compartilhar e escolha `Adicionar à Tela de Início`.
 
 ## Observações
 

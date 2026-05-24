@@ -4,7 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#061c44">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Conecta RHiD">
     <title>Conecta RHiD</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/app-icon-192.png">
+    <link rel="apple-touch-icon" href="assets/app-icon-192.png">
     <link rel="stylesheet" href="styles.css">
     <script>
       window.ConectaRHiDConfig = {
@@ -107,6 +114,10 @@
             <button id="backupButton" class="ghost-button admin-only" type="button">
               <span aria-hidden="true">⇩</span>
               Backup JSON
+            </button>
+            <button id="installAppButton" class="ghost-button app-hidden" type="button">
+              <span aria-hidden="true">▣</span>
+              Instalar app
             </button>
             <button id="logoutButton" class="ghost-button" type="button">
               <span aria-hidden="true">↪</span>

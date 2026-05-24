@@ -37,6 +37,7 @@ https://ponto.conectaiba.com.br
 - Resumo de fechamento para conferência.
 - Exportação Excel dos registros.
 - Impressão do fechamento.
+- Instalação como app no celular via PWA.
 - Backup JSON dos dados.
 - Backend centralizado no Supabase para uso em vários aparelhos.
 - Banco de dados Supabase/PostgreSQL.
@@ -61,6 +62,12 @@ Os dados ficam salvos no Supabase, incluindo fotos em formato compactado e coord
 - Trocar as senhas iniciais antes de usar em produção.
 
 Para deploy gratuito com Supabase + Vercel, consulte `DEPLOY_SUPABASE_VERCEL.md`.
+
+## App no celular
+
+Depois de publicar no domínio HTTPS, abra `https://ponto.conectaiba.com.br` no celular.
+No Android, use o botão `Instalar app` quando aparecer.
+No iPhone, use o menu de compartilhamento do Safari e escolha `Adicionar à Tela de Início`.
 
 ## DNS sugerido
 

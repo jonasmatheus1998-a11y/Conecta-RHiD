@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node -e \"console.log('Static site ready')\"",
     "start": "node server.js",
-    "check": "node --check server.js && node --check app.js"
+    "check": "node --check server.js && node --check app.js && node --check sw.js"
   },
   "engines": {
     "node": ">=24.0.0"

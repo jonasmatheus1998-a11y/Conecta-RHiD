@@ -6,6 +6,7 @@ const SUPABASE_KEY = window.ConectaRHiDConfig.supabaseKey;
 let state = { employees: [], records: [] };
 let currentSession = loadSession();
 let syncTimer = null;
+let installPromptEvent = null;
 
 const elements = {
   loginScreen: document.querySelector("#loginScreen"),
@@ -48,6 +49,7 @@ const elements = {
   reportTable: document.querySelector("#reportTable"),
   exportCsvButton: document.querySelector("#exportCsvButton"),
   printReportButton: document.querySelector("#printReportButton"),
+  installAppButton: document.querySelector("#installAppButton"),
   backupButton: document.querySelector("#backupButton"),
   logoutButton: document.querySelector("#logoutButton"),
   userInitials: document.querySelector("#userInitials"),
@@ -1099,6 +1101,38 @@ function printReport() {
   window.print();
 }
 
+async function installApp() {
+  if (!installPromptEvent) {
+    showToast("No iPhone, use Compartilhar e depois Adicionar à Tela de Início.");
+    return;
+  }
+
+  installPromptEvent.prompt();
+  await installPromptEvent.userChoice;
+  installPromptEvent = null;
+  elements.installAppButton.classList.add("app-hidden");
+}
+
+function setupPwa() {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    installPromptEvent = event;
+    elements.installAppButton.classList.remove("app-hidden");
+  });
+
+  window.addEventListener("appinstalled", () => {
+    installPromptEvent = null;
+    elements.installAppButton.classList.add("app-hidden");
+    showToast("Conecta RHiD instalado.");
+  });
+}
+
 document.querySelectorAll(".nav-tab").forEach((button) => {
   button.addEventListener("click", () => {
     if (!isAdmin() && button.dataset.tab !== "ponto") return;
@@ -1128,6 +1162,7 @@ elements.reportStartDate.addEventListener("change", renderReport);
 elements.reportEndDate.addEventListener("change", renderReport);
 elements.exportCsvButton.addEventListener("click", exportExcel);
 elements.printReportButton.addEventListener("click", printReport);
+elements.installAppButton.addEventListener("click", installApp);
 elements.backupButton.addEventListener("click", backupJson);
 
 elements.employeeCards.addEventListener("click", (event) => {
@@ -1139,6 +1174,7 @@ elements.employeeCards.addEventListener("click", (event) => {
 
 elements.monthFilter.value = monthKey();
 setReportRangeFromMonth();
+setupPwa();
 renderClock();
 updateLoginMode();
 if (currentSession) {
