@@ -1,0 +1,18 @@
+services:
+  conecta-rhid:
+    build: .
+    container_name: conecta-rhid
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_PATH: /data/conecta-rhid.sqlite
+      ADMIN_EMAIL: admin@conecta.com
+      ADMIN_PASSWORD: troque-esta-senha
+    ports:
+      - "8080:8080"
+    volumes:
+      - conecta-rhid-data:/data
+
+volumes:
+  conecta-rhid-data:

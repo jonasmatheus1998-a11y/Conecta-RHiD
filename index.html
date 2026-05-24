@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#061c44">
+    <title>Conecta RHiD</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <section id="loginScreen" class="login-screen">
+      <div class="login-brand-panel">
+        <img src="assets/logo-conecta.png" alt="Conecta+ Educação e Tecnologia">
+        <div>
+          <p>Bem-vindo ao</p>
+          <h1>Conecta RHiD</h1>
+          <span>Controle de ponto com login, foto obrigatória e GPS.</span>
+        </div>
+      </div>
+
+      <form id="loginForm" class="login-card">
+        <div class="login-heading">
+          <p>Acesso ao sistema</p>
+          <h2>Entrar</h2>
+        </div>
+
+        <div class="login-mode" role="radiogroup" aria-label="Tipo de acesso">
+          <label>
+            <input type="radio" name="loginMode" value="employee" checked>
+            <span>Funcionário</span>
+          </label>
+          <label>
+            <input type="radio" name="loginMode" value="admin">
+            <span>Administrador</span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span id="loginIdentifierLabel">Código do funcionário</span>
+          <input id="loginIdentifier" type="text" autocomplete="username" placeholder="Ex: CET-001" required>
+        </label>
+
+        <label class="field">
+          <span>Senha</span>
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
+        </label>
+
+        <button class="primary-action login-submit" type="submit">Entrar</button>
+
+        <div class="login-help">
+          <strong>Acesso inicial</strong>
+          <span>Admin: admin@conecta.com / admin123</span>
+          <span>Funcionários: código CET-001 a CET-005 / senha 123456</span>
+        </div>
+      </form>
+    </section>
+
+    <main id="appShell" class="app-shell app-hidden">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <img class="brand-logo" src="assets/logo-conecta.png" alt="Conecta+ Educação e Tecnologia">
+        </div>
+
+        <nav class="nav-tabs" aria-label="Seções">
+          <button class="nav-tab active" data-tab="ponto" type="button">
+            <span aria-hidden="true">◷</span>
+            Ponto
+          </button>
+          <button class="nav-tab admin-only" data-tab="relatorios" type="button">
+            <span aria-hidden="true">▦</span>
+            Relatórios
+          </button>
+          <button class="nav-tab admin-only" data-tab="funcionarios" type="button">
+            <span aria-hidden="true">◎</span>
+            Funcionários
+          </button>
+        </nav>
+
+        <section class="clock-panel" aria-label="Relógio atual">
+          <span id="currentDate">--</span>
+          <strong id="currentTime">--:--:--</strong>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="topbar-title">
+            <img class="topbar-logo" src="assets/logo-conecta.png" alt="">
+            <div>
+              <p>Sistema de ponto eletrônico</p>
+              <h1>Conecta RHiD</h1>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <div class="user-pill" aria-label="Usuário atual">
+              <span id="userInitials">--</span>
+              <div>
+                <strong id="userName">--</strong>
+                <small id="userRole">--</small>
+              </div>
+            </div>
+            <button id="backupButton" class="ghost-button admin-only" type="button">
+              <span aria-hidden="true">⇩</span>
+              Backup JSON
+            </button>
+            <button id="logoutButton" class="ghost-button" type="button">
+              <span aria-hidden="true">↪</span>
+              Sair
+            </button>
+          </div>
+        </header>
+
+        <section id="ponto" class="tab-view active" aria-labelledby="ponto-title">
+          <section class="overview-grid" aria-label="Resumo do ponto">
+            <article class="overview-card time-overview">
+              <div>
+                <p>Horário atual</p>
+                <strong id="currentTimeLarge">--:--:--</strong>
+                <span id="currentDateLine">--</span>
+              </div>
+            </article>
+            <article class="overview-card validation-overview">
+              <p>Validação obrigatória</p>
+              <strong>GPS, foto e horário automático</strong>
+              <span>Cada batida salva a identidade visual, localização e data do registro.</span>
+            </article>
+            <article class="overview-card total-overview">
+              <p>Total de hoje</p>
+              <strong id="todayTotalLarge">0h00</strong>
+              <span>Horas trabalhadas conforme entrada, almoço e saída.</span>
+            </article>
+          </section>
+
+          <div class="split-grid">
+            <section class="panel punch-panel">
+              <div class="panel-heading">
+                <div>
+                  <p>Registro</p>
+                  <h2 id="ponto-title">Bater ponto</h2>
+                </div>
+                <span id="statusBadge" class="status-badge">Pronto</span>
+              </div>
+
+              <label class="field">
+                <span>Funcionário</span>
+                <select id="employeeSelect"></select>
+              </label>
+
+              <div id="employeeSummary" class="employee-summary"></div>
+
+              <div class="workday-flow" aria-label="Sequência da jornada">
+                <span>Entrada</span>
+                <span>Intervalo</span>
+                <span>Volta do intervalo</span>
+                <span>Saída</span>
+              </div>
+
+              <section class="verification-box" aria-label="Verificação de identidade e localização">
+                <div class="camera-frame">
+                  <video id="cameraPreview" autoplay muted playsinline></video>
+                  <canvas id="photoCanvas" hidden></canvas>
+                </div>
+                <div class="verification-status">
+                  <span id="cameraStatus">Câmera aguardando permissão</span>
+                  <span id="gpsStatus">GPS será solicitado na batida</span>
+                </div>
+                <button id="startCameraButton" class="ghost-button" type="button">
+                  <span aria-hidden="true">●</span>
+                  Ativar câmera
+                </button>
+              </section>
+
+              <div class="punch-actions" aria-label="Tipos de registro">
+                <button class="primary-action" data-action="entrada" type="button">
+                  <span aria-hidden="true">→</span>
+                  <strong>Entrada</strong>
+                  <small>Iniciar expediente</small>
+                </button>
+                <button class="secondary-action" data-action="intervalo" type="button">
+                  <span aria-hidden="true">☕</span>
+                  <strong>Intervalo</strong>
+                  <small>Registrar pausa</small>
+                </button>
+                <button class="secondary-action" data-action="retorno" type="button">
+                  <span aria-hidden="true">↻</span>
+                  <strong>Volta do intervalo</strong>
+                  <small>Retornar ao trabalho</small>
+                </button>
+                <button class="danger-action" data-action="saida" type="button">
+                  <span aria-hidden="true">←</span>
+                  <strong>Saída</strong>
+                  <small>Encerrar expediente</small>
+                </button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p>Hoje</p>
+                  <h2>Registros do dia</h2>
+                </div>
+                <strong id="todayTotal" class="total-pill">0h00</strong>
+              </div>
+              <div id="todayRecords" class="records-list"></div>
+            </section>
+          </div>
+
+          <section class="trust-strip" aria-label="Recursos de segurança do ponto">
+            <article>
+              <strong>Registro com GPS</strong>
+              <span>Localização capturada automaticamente no momento do ponto.</span>
+            </article>
+            <article>
+              <strong>Foto obrigatória</strong>
+              <span>A foto é registrada para validar a identidade do funcionário.</span>
+            </article>
+            <article>
+              <strong>Seguro e confiável</strong>
+              <span>Os dados ficam protegidos no navegador e podem ser exportados.</span>
+            </article>
+          </section>
+        </section>
+
+        <section id="relatorios" class="tab-view" aria-labelledby="relatorios-title">
+          <section class="panel">
+            <div class="panel-heading report-heading">
+              <div>
+                <p>Fechamento</p>
+                <h2 id="relatorios-title">Relatório mensal</h2>
+              </div>
+              <div class="report-controls">
+                <input id="monthFilter" type="month">
+                <button id="exportCsvButton" class="ghost-button" type="button">
+                  <span aria-hidden="true">⇩</span>
+                  CSV
+                </button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Funcionário</th>
+                    <th>Dias com ponto</th>
+                    <th>Horas no mês</th>
+                    <th>Último registro</th>
+                    <th>GPS</th>
+                  </tr>
+                </thead>
+                <tbody id="reportTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="funcionarios" class="tab-view" aria-labelledby="funcionarios-title">
+          <div class="split-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p>Equipe</p>
+                  <h2 id="funcionarios-title">Funcionários</h2>
+                </div>
+              </div>
+              <div id="employeeCards" class="employee-cards"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p>Cadastro</p>
+                  <h2>Adicionar ou editar</h2>
+                </div>
+              </div>
+              <form id="employeeForm" class="employee-form">
+                <input id="employeeId" type="hidden">
+                <label class="field">
+                  <span>Nome</span>
+                  <input id="employeeName" type="text" required maxlength="80">
+                </label>
+                <label class="field">
+                  <span>Cargo</span>
+                  <input id="employeeRole" type="text" required maxlength="80">
+                </label>
+                <label class="field">
+                  <span>Código</span>
+                  <input id="employeeCode" type="text" required maxlength="20">
+                </label>
+                <label class="field">
+                  <span>Senha de acesso</span>
+                  <input id="employeePassword" type="text" maxlength="30">
+                </label>
+                <div class="form-actions">
+                  <button class="primary-action" type="submit">Salvar</button>
+                  <button id="clearFormButton" class="ghost-button" type="button">Limpar</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
